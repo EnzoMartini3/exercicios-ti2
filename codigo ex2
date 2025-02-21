@@ -1,0 +1,135 @@
+-- Criação da Tabela no PostgreSQL
+CREATE TABLE X (
+    id SERIAL PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL,
+    valor NUMERIC(10,2) NOT NULL
+);
+
+// Classe X
+public class X {
+    private int id;
+    private String nome;
+    private double valor;
+
+    public X(int id, String nome, double valor) {
+        this.id = id;
+        this.nome = nome;
+        this.valor = valor;
+    }
+
+    public int getId() { return id; }
+    public void setId(int id) { this.id = id; }
+    public String getNome() { return nome; }
+    public void setNome(String nome) { this.nome = nome; }
+    public double getValor() { return valor; }
+    public void setValor(double valor) { this.valor = valor; }
+}
+
+// Classe XDAO
+import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
+
+public class XDAO {
+    private Connection conexao;
+
+    public XDAO() throws SQLException {
+        this.conexao = DriverManager.getConnection("jdbc:postgresql://localhost:5432/seubanco", "usuario", "senha");
+    }
+
+    public void inserir(X x) throws SQLException {
+        String sql = "INSERT INTO X (nome, valor) VALUES (?, ?)";
+        try (PreparedStatement stmt = conexao.prepareStatement(sql)) {
+            stmt.setString(1, x.getNome());
+            stmt.setDouble(2, x.getValor());
+            stmt.executeUpdate();
+        }
+    }
+
+    public List<X> listar() throws SQLException {
+        List<X> lista = new ArrayList<>();
+        String sql = "SELECT * FROM X";
+        try (Statement stmt = conexao.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                lista.add(new X(rs.getInt("id"), rs.getString("nome"), rs.getDouble("valor")));
+            }
+        }
+        return lista;
+    }
+
+    public void atualizar(X x) throws SQLException {
+        String sql = "UPDATE X SET nome = ?, valor = ? WHERE id = ?";
+        try (PreparedStatement stmt = conexao.prepareStatement(sql)) {
+            stmt.setString(1, x.getNome());
+            stmt.setDouble(2, x.getValor());
+            stmt.setInt(3, x.getId());
+            stmt.executeUpdate();
+        }
+    }
+
+    public void excluir(int id) throws SQLException {
+        String sql = "DELETE FROM X WHERE id = ?";
+        try (PreparedStatement stmt = conexao.prepareStatement(sql)) {
+            stmt.setInt(1, id);
+            stmt.executeUpdate();
+        }
+    }
+}
+
+// Classe Principal com Menu CRUD
+import java.sql.SQLException;
+import java.util.List;
+import java.util.Scanner;
+
+public class Principal {
+    public static void main(String[] args) {
+        try {
+            XDAO dao = new XDAO();
+            Scanner scanner = new Scanner(System.in);
+            int opcao;
+            do {
+                System.out.println("1. Listar");
+                System.out.println("2. Inserir");
+                System.out.println("3. Atualizar");
+                System.out.println("4. Excluir");
+                System.out.println("5. Sair");
+                System.out.print("Escolha uma opção: ");
+                opcao = scanner.nextInt();
+                scanner.nextLine();
+
+                switch (opcao) {
+                    case 1:
+                        List<X> lista = dao.listar();
+                        for (X x : lista) {
+                            System.out.println(x.getId() + ": " + x.getNome() + " - " + x.getValor());
+                        }
+                        break;
+                    case 2:
+                        System.out.print("Nome: ");
+                        String nome = scanner.nextLine();
+                        System.out.print("Valor: ");
+                        double valor = scanner.nextDouble();
+                        dao.inserir(new X(0, nome, valor));
+                        break;
+                    case 3:
+                        System.out.print("ID: ");
+                        int idAtualizar = scanner.nextInt();
+                        scanner.nextLine();
+                        System.out.print("Novo Nome: ");
+                        String novoNome = scanner.nextLine();
+                        System.out.print("Novo Valor: ");
+                        double novoValor = scanner.nextDouble();
+                        dao.atualizar(new X(idAtualizar, novoNome, novoValor));
+                        break;
+                    case 4:
+                        System.out.print("ID: ");
+                        int idExcluir = scanner.nextInt();
+                        dao.excluir(idExcluir);
+                        break;
+                }
+            } while (opcao != 5);
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+}
